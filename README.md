@@ -57,7 +57,8 @@ Files written
 
 GUI usage (Tkinter)
 -------------------
-1. Ensure Tkinter is available.
+1. Go to where the repository is located e.g :
+   - 'cd orthogroup_extractor'
 2. Run:
    - `python extract_from_orthogroups_gui.py`
 3. In the GUI:
