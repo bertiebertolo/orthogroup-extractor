@@ -58,7 +58,7 @@ Files written
 GUI usage (Tkinter)
 -------------------
 1. Go to where the repository is located e.g :
-   - 'cd orthogroup_extractor'
+   - `cd orthogroup_extractor`
 2. Run:
    - `python extract_from_orthogroups_gui.py`
 3. In the GUI:
@@ -70,30 +70,6 @@ GUI usage (Tkinter)
    - (Optional) Toggle "Match gene-prefix" — the GUI will auto-enable it if the CSV column looks like gene IDs.
    - Set output folder and prefix, then click "Run".
 4. Inspect the written files in the output folder and the GUI log / popup summary.
-
-CLI usage
----------
-Basic example:
-```
-python extract_from_orthogroups.py \
-  --orthogroups /path/to/Orthogroups.tsv \
-  --csv queries.csv \
-  --csv-column GENE_ID \
-  --source-species Aedes_aegypti \
-  --target-species All \
-  --out-prefix my_results
-```
-
-Options (high level)
-- `--orthogroups` PATH : required — path to Orthogroups.tsv
-- `--csv` PATH : required — CSV containing query IDs
-- `--csv-column` NAME_OR_INDEX : which CSV column contains query IDs (header name or 0-based index)
-- `--source-species` NAME : species name exactly as in `Orthogroups.tsv` header
-- `--target-species` NAME or `All` : target species or `All` to create wide output
-- `--match-gene-prefix` : force gene-prefix matching
-- `--no-auto-detect` : disable auto-detection of ID style
-- `--id-map` PATH : optional two-column TSV protein_id<TAB>gene_name to annotate member IDs in outputs
-- `--preview N` : print the first N unique IDs from the CSV column and exit
 
 Notes and troubleshooting
 -------------------------
