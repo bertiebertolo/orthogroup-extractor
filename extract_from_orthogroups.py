@@ -182,32 +182,6 @@ def preview_ids(rows_with_vals, n=50):
             break
     return uniq, len(seen)
 
-def parse_keep_columns_arg(arg, header):
-    """
-    arg: comma-separated list, or "all"
-    returns list of header names to keep (in order)
-    """
-    if not arg:
-        return header[:]  # default all
-    if arg.strip().lower() == "all":
-        return header[:]
-    parts = [p.strip() for p in arg.split(",") if p.strip()]
-    keep = []
-    for p in parts:
-        if p in header:
-            keep.append(p)
-        else:
-            # allow numeric indices
-            try:
-                idx = int(p)
-                if 0 <= idx < len(header):
-                    keep.append(header[idx])
-                else:
-                    print(f"Warning: keep-column index {p} out of range, ignored", file=sys.stderr)
-            except Exception:
-                print(f"Warning: keep-column '{p}' not in header and not an index, ignored", file=sys.stderr)
-    return keep
-
 def main():
     parser = argparse.ArgumentParser(description="Extract orthologs from OrthoFinder (CSV-support CLI)")
     parser.add_argument("--orthogroups", required=True)
@@ -220,8 +194,6 @@ def main():
     parser.add_argument("--no-auto-detect", action="store_true", help="Disable auto-detection of CSV ID style")
     parser.add_argument("--id-map", help="optional TSV protein_id<TAB>gene_name to annotate output")
     parser.add_argument("--preview", type=int, default=0, help="If >0, print first N unique IDs and exit")
-    # keep-columns option retained for compatibility but ignored (CLI will not append input CSV columns)
-    parser.add_argument("--keep-columns", default="none", help='DEPRECATED: input CSV columns will not be appended to outputs')
     args = parser.parse_args()
 
     if not os.path.isfile(args.orthogroups):
@@ -254,8 +226,7 @@ def main():
             print(s)
         sys.exit(0)
 
-    # NOTE: keep-columns option intentionally ignored — outputs will not include input CSV columns
-    keep_cols = []  # explicit: do not append any input CSV columns to outputs
+    # NOTE: outputs do not include any input CSV columns
 
     # detect id style unless disabled or forced
     match_prefix = args.match_gene_prefix
@@ -301,7 +272,7 @@ def main():
                     for pid in candidates:
                         if prot_to_species.get(pid) == args.source_species:
                             matched_proteins.add(pid)
-                    qtok = re.split(r'[-|._:]', normq)[0] if normq else ""
+                    qtok = re.split(r'[-|.:]', normq)[0] if normq else ""
                     if qtok and qtok != q:
                         candidates2 = geneprefix_index.get(qtok, set())
                         for pid in candidates2:
@@ -377,7 +348,7 @@ def main():
                 for pid in candidates:
                     if prot_to_species.get(pid) == args.source_species:
                         matched_proteins.add(pid)
-                qtok = re.split(r'[-|._:]', normq)[0] if normq else ""
+                qtok = re.split(r'[-|.:]', normq)[0] if normq else ""
                 if qtok and qtok != q:
                     candidates2 = geneprefix_index.get(qtok, set())
                     for pid in candidates2:
