@@ -26,7 +26,8 @@ def normalize_protid_header(hdr):
 
 def gene_prefix_from_protid(protid):
     token = normalize_protid_header(protid)
-    return re.split(r'[-|._:]', token)[0]
+    # exclude underscore: NCBI IDs like "XP_43422" contain underscores as part of the ID
+    return re.split(r'[-|.:]', token)[0]
 
 def sanitize_fname(s):
     return re.sub(r'\s+', '_', s)
