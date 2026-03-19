@@ -156,7 +156,7 @@ def detect_column_id_style_from_rows(rows_with_vals, sample_n=200):
         return {'protein_frac': 0.0, 'prefix_frac': 0.0, 'mostly_prefix': False, 'sample_count':0}
     prot_count = 0
     prefix_count = 0
-    prot_re = re.compile(r'.+-[A-Za-z0-9]+$')
+    prot_re = re.compile(r'.+[-_][A-Za-z0-9]+$')  # matches hyphen or underscore (e.g., AAEL027978-PA or XP_43422)
     prefix_re = re.compile(r'^[A-Za-z]{1,}\d{3,}[A-Za-z0-9]*$')
     for v in vals:
         if prot_re.search(v):
@@ -231,10 +231,7 @@ class App:
         self.csv_preview = tk.Text(left, width=80, height=6)
         self.csv_preview.grid(row=5, column=1, columnspan=2, sticky="we", padx=5, pady=(6,0))
 
-        # columns-to-keep selector (multi-select)
-        ttk.Label(left, text="Columns to keep in output (select, Ctrl+click):").grid(row=6, column=0, sticky="w", pady=(6,0))
-        self.keep_cols_listbox = tk.Listbox(left, selectmode="multiple", height=6, exportselection=False)
-        self.keep_cols_listbox.grid(row=6, column=1, columnspan=2, sticky="we", padx=5)
+        # Note: input CSV columns are never included in outputs (design decision)
 
         # match-prefix option (auto-enabled) - using tk.Checkbutton with wrapping to avoid clipping
         bfont = tkfont.Font(family="Helvetica", size=11)
@@ -249,24 +246,24 @@ class App:
             wraplength=600
         )
         # allow it to span both columns so text can use full width
-        self.match_prefix_cb.grid(row=7, column=1, columnspan=2, sticky="we", pady=(6,0))
+        self.match_prefix_cb.grid(row=6, column=1, columnspan=2, sticky="we", pady=(6,0))
 
-        ttk.Label(left, text="Output folder (full path):").grid(row=8, column=0, sticky="w", pady=(6,0))
+        ttk.Label(left, text="Output folder (full path):").grid(row=7, column=0, sticky="w", pady=(6,0))
         self.out_entry = ttk.Entry(left, width=90)
-        self.out_entry.grid(row=8, column=1, sticky="we", padx=5, pady=(6,0))
+        self.out_entry.grid(row=7, column=1, sticky="we", padx=5, pady=(6,0))
 
-        ttk.Label(left, text="Output prefix:").grid(row=9, column=0, sticky="w", pady=(6,0))
+        ttk.Label(left, text="Output prefix:").grid(row=8, column=0, sticky="w", pady=(6,0))
         self.out_prefix_entry = ttk.Entry(left, width=40)
         self.out_prefix_entry.insert(0, "orthologs")
-        self.out_prefix_entry.grid(row=9, column=1, sticky="w", padx=5, pady=(6,0))
+        self.out_prefix_entry.grid(row=8, column=1, sticky="w", padx=5, pady=(6,0))
 
         self.run_btn = ttk.Button(left, text="Run", command=self.start_run)
-        self.run_btn.grid(row=10, column=1, pady=(12,0), sticky="w")
+        self.run_btn.grid(row=9, column=1, pady=(12,0), sticky="w")
 
-        ttk.Label(left, text="Log / progress:").grid(row=11, column=0, sticky="nw", pady=(8,0))
+        ttk.Label(left, text="Log / progress:").grid(row=10, column=0, sticky="nw", pady=(8,0))
         self.log_text = tk.Text(left, width=100, height=12, wrap="none")
-        self.log_text.grid(row=11, column=1, columnspan=2, sticky="nsew", padx=5, pady=(8,0))
-        left.rowconfigure(11, weight=1)
+        self.log_text.grid(row=10, column=1, columnspan=2, sticky="nsew", padx=5, pady=(8,0))
+        left.rowconfigure(10, weight=1)
         left.columnconfigure(1, weight=1)
 
         # Right column: ID preview / list
@@ -340,11 +337,6 @@ class App:
             self.csv_rows = rows
             self.csv_col_combo['values'] = header
             self.csv_col_combo.current(0)
-            # populate keep-columns listbox (default: select all)
-            self.keep_cols_listbox.delete(0, tk.END)
-            for i, col in enumerate(header):
-                self.keep_cols_listbox.insert(tk.END, col)
-                self.keep_cols_listbox.selection_set(i)
             preview_rows = rows[:30]
             preview_text = f"Detected delimiter: '{delim}'\nHeader:\n{header}\n\nFirst {len(preview_rows)} rows:\n"
             for row in preview_rows:
@@ -440,11 +432,7 @@ class App:
         except Exception:
             messagebox.showinfo("Copy", "Copy not available on this system.")
 
-    def get_selected_keep_columns(self):
-        sel = self.keep_cols_listbox.curselection()
-        if not sel:
-            return []
-        return [self.keep_cols_listbox.get(i) for i in sel]
+
 
     def _update_checkbox_wrap(self, event=None):
         # adjust wraplength so the checkbox label reflows with window size
@@ -477,8 +465,6 @@ class App:
         out_folder = self.out_entry.get().strip() or os.getcwd()
         out_prefix = self.out_prefix_entry.get().strip() or "orthologs"
         match_prefix = bool(self.match_prefix_var.get())
-        keep_cols = self.get_selected_keep_columns()
-
         if not ortho or not os.path.isfile(ortho):
             messagebox.showerror("Input error", "Please enter a valid Orthogroups.tsv file path.")
             return
@@ -504,12 +490,12 @@ class App:
                 return
 
         self.run_btn.config(state="disabled")
-        self.log("Starting ortholog extraction (no id-map)...")
-        t = threading.Thread(target=self.worker_run, args=(csv_file, csv_col, source_species, target_species, match_prefix, out_folder, out_prefix, keep_cols))
+        self.log("Starting ortholog extraction...")
+        t = threading.Thread(target=self.worker_run, args=(csv_file, csv_col, source_species, target_species, match_prefix, out_folder, out_prefix))
         t.daemon = True
         t.start()
 
-    def worker_run(self, csv_file, csv_col, source_species, target_species, match_prefix, out_folder, out_prefix, keep_cols):
+    def worker_run(self, csv_file, csv_col, source_species, target_species, match_prefix, out_folder, out_prefix):
         try:
             header, rows, delim = read_csv_rows(csv_file)
             if not header:
@@ -525,18 +511,14 @@ class App:
 
             target_is_all = (str(target_species).strip().lower() == "all")
             safe_out_prefix = sanitize_fname(out_prefix)
-
-            # Determine which indices from header correspond to keep_cols (for appending rows)
-            # OVERRIDE: do not include any input CSV columns in outputs
-            keep_cols = []
-            keep_indices = [header.index(c) for c in keep_cols if c in header]
+            # Note: input CSV columns are not included in outputs (design decision)
 
             if target_is_all:
                 out_fname = os.path.join(out_folder, f"{safe_out_prefix}_all_wide.tsv")
                 not_found_fname = os.path.join(out_folder, f"{safe_out_prefix}_all_not_found.tsv")
                 # build species list excluding source_species
                 species_excluding_source = [s for s in self.species if s != source_species]
-                with open(out_fname, "w", newline='') as wfh, open(not_found_fname, "w", newline='') as nfh:
+                with open(out_fname, 'w', newline='') as wfh, open(not_found_fname, 'w', newline='') as nfh:
                     writer = csv.writer(wfh, delimiter="\t")
                     n_writer = csv.writer(nfh, delimiter="\t")
                     wide_fieldnames = ["query_id", "orthogroup"] + species_excluding_source
@@ -602,15 +584,15 @@ class App:
                                 wide_cells = [""] * len(species_excluding_source)
                             writer.writerow([q, og] + wide_cells)
 
-                    summary_lines = [
-                        f"Total queries processed: {total_queries}",
-                        f"Queries with any OG match in source species: {count_matched}",
-                        f"Total OG-rows written (sum over matching OGs): {count_matched_og}",
-                        f"Queries NOT_FOUND: {count_not_found}"
-                    ]
-                    for ln in summary_lines:
-                        self.log(ln)
-                    messagebox.showinfo("Run summary", "\n".join(summary_lines))
+                    self.log(f"Total queries processed: {total_queries}")
+                    self.log(f"Queries with any OG match in source species: {count_matched}")
+                    self.log(f"Total OG-rows written (sum over matching OGs): {count_matched_og}")
+                    self.log(f"Queries NOT_FOUND: {count_not_found}")
+                    messagebox.showinfo("Run summary",
+                        f"Total queries processed: {total_queries}\n"
+                        f"Queries with any OG match: {count_matched}\n"
+                        f"Total OG-rows written: {count_matched_og}\n"
+                        f"NOT_FOUND: {count_not_found}")
                     self.log(f"Done. Wrote:\n  {out_fname}\n  {not_found_fname}")
             else:
                 # specific target species: output one file and a not-found file
@@ -619,7 +601,7 @@ class App:
                 target_out = os.path.join(out_folder, f"{prefix}_target.tsv")
                 not_found_out = os.path.join(out_folder, f"{prefix}_not_found.tsv")
 
-                with open(target_out, "w", newline='') as tfh, open(not_found_out, "w", newline='') as nfh:
+                with open(target_out, 'w', newline='') as tfh, open(not_found_out, 'w', newline='') as nfh:
                     t_writer = csv.writer(tfh, delimiter="\t")
                     n_writer = csv.writer(nfh, delimiter="\t")
                     t_writer.writerow(["query_id", "orthogroup", f"{target_species}_members"])
@@ -686,16 +668,17 @@ class App:
 
                             t_writer.writerow([q, og, target_str])
 
-                summary_lines = [
-                    f"Total queries processed: {total_queries}",
-                    f"Queries with any OG match in source species: {count_matched}",
-                    f"Queries with non-empty members in target species: {count_matched_target_nonempty}",
-                    f"Total OG-rows written (sum over matching OGs): {count_matched_og}",
-                    f"Queries NOT_FOUND: {count_not_found}"
-                ]
-                for ln in summary_lines:
-                    self.log(ln)
-                messagebox.showinfo("Run summary", "\n".join(summary_lines))
+                self.log(f"Total queries processed: {total_queries}")
+                self.log(f"Queries with any OG match in source species: {count_matched}")
+                self.log(f"Queries with non-empty members in target species: {count_matched_target_nonempty}")
+                self.log(f"Total OG-rows written (sum over matching OGs): {count_matched_og}")
+                self.log(f"Queries NOT_FOUND: {count_not_found}")
+                messagebox.showinfo("Run summary",
+                    f"Total queries processed: {total_queries}\n"
+                    f"Queries with match: {count_matched}\n"
+                    f"With non-empty target: {count_matched_target_nonempty}\n"
+                    f"Total OG-rows written: {count_matched_og}\n"
+                    f"NOT_FOUND: {count_not_found}")
                 self.log(f"Done. Wrote:\n  {target_out}\n  {not_found_out}")
         except Exception as e:
             self.log(f"ERROR: {e}")
