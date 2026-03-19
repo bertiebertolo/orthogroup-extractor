@@ -62,7 +62,7 @@ def parse_orthogroups_full(path, log_fn=None):
         reader = csv.reader(fh, delimiter='\t')
         header = next(reader)
         if len(header) < 2:
-            raise RuntimeError("Orthogroups.tsv header looks wrong.")
+            raise ValueError("Orthogroups.tsv header looks wrong.")
         species = header[1:]
         if log_fn:
             log_fn(f"Orthogroups header parsed: {len(species)} species.")
@@ -563,7 +563,7 @@ class App:
                             for pid in candidates:
                                 if self.prot_to_species.get(pid) == source_species:
                                     matched_proteins.add(pid)
-                            qtok = re.split(r'[-|._:]', normq)[0] if normq else ""
+                            qtok = re.split(r'[-|.:]', normq)[0] if normq else ""
                             if qtok and qtok != q:
                                 candidates2 = self.geneprefix_index.get(qtok, set())
                                 for pid in candidates2:
@@ -645,7 +645,7 @@ class App:
                             for pid in candidates:
                                 if self.prot_to_species.get(pid) == source_species:
                                     matched_proteins.add(pid)
-                            qtok = re.split(r'[-|._:]', normq)[0] if normq else ""
+                            qtok = re.split(r'[-|.:]', normq)[0] if normq else ""
                             if qtok and qtok != q:
                                 candidates2 = self.geneprefix_index.get(qtok, set())
                                 for pid in candidates2:
