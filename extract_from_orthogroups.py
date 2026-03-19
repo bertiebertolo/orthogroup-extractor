@@ -135,7 +135,7 @@ def detect_column_id_style_from_rows(rows_with_vals, sample_n=200):
         return {'protein_frac': 0.0, 'prefix_frac': 0.0, 'mostly_prefix': False, 'sample_count':0}
     prot_count = 0
     prefix_count = 0
-    prot_re = re.compile(r'.+-[A-Za-z0-9]+$')
+    prot_re = re.compile(r'.+[-_][A-Za-z0-9]+$')  # matches hyphen or underscore (e.g., AAEL027978-PA or XP_43422)
     prefix_re = re.compile(r'^[A-Za-z]{1,}\d{3,}[A-Za-z0-9]*$')
     for v in vals:
         if prot_re.search(v):
@@ -177,9 +177,8 @@ def preview_ids(rows_with_vals, n=50):
             continue
         if v not in seen:
             seen.add(v)
-            uniq.append(v)
-        if len(uniq) >= n:
-            break
+            if len(uniq) < n:
+                uniq.append(v)
     return uniq, len(seen)
 
 def main():
@@ -244,8 +243,9 @@ def main():
 
     # All target: single wide file (exclude source species from wide columns)
     if target_is_all:
-        out_fname = f"{sanitize_fname(args.out_prefix)}_all_wide.tsv"
-        not_found_fname = f"{sanitize_fname(args.out_prefix)}_all_not_found.tsv"
+        safe_out_prefix = sanitize_fname(args.out_prefix)
+        out_fname = f"{safe_out_prefix}_all_wide.tsv"
+        not_found_fname = f"{safe_out_prefix}_all_not_found.tsv"
         count_not_found = 0
         count_matched = 0
         count_matched_og = 0
@@ -306,13 +306,10 @@ def main():
                             ids = parse_members_cell(cell)
                             wide_cells.append(format_ids(ids, id_map=id_map))
                     writer.writerow([q, og] + wide_cells)
-        summary_lines = [
-            f"Total queries processed: {total_queries}",
-            f"Queries with any OG match in source species: {count_matched}",
-            f"Total OG-rows written (sum over matching OGs): {count_matched_og}",
-            f"Queries NOT_FOUND: {count_not_found}"
-        ]
-        print("\n".join(summary_lines))
+        print(f"Total queries processed: {total_queries}")
+        print(f"Queries with any OG match in source species: {count_matched}")
+        print(f"Total OG-rows written (sum over matching OGs): {count_matched_og}")
+        print(f"Queries NOT_FOUND: {count_not_found}")
         print("Wrote:", out_fname, not_found_fname)
         sys.exit(0)
 
@@ -383,14 +380,11 @@ def main():
                     count_matched_target_nonempty += 1
                 t_writer.writerow([q, og, target_str])
 
-    summary_lines = [
-        f"Total queries processed: {total_queries}",
-        f"Queries with any OG match in source species: {count_matched}",
-        f"Queries with non-empty members in target species: {count_matched_target_nonempty}",
-        f"Total OG-rows written (sum over matching OGs): {count_matched_og}",
-        f"Queries NOT_FOUND: {count_not_found}"
-    ]
-    print("\n".join(summary_lines))
+    print(f"Total queries processed: {total_queries}")
+    print(f"Queries with any OG match in source species: {count_matched}")
+    print(f"Queries with non-empty members in target species: {count_matched_target_nonempty}")
+    print(f"Total OG-rows written (sum over matching OGs): {count_matched_og}")
+    print(f"Queries NOT_FOUND: {count_not_found}")
     print("Wrote:", target_out, not_found_out)
 
 if __name__ == "__main__":
